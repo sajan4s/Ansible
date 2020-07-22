@@ -8,7 +8,7 @@
      become: true
      become_method: sudo
      group:
-       gid: 19954
+       gid: 33596
        name: apache
        state: present
    - name: create user
@@ -26,5 +26,5 @@
    - name: adding local apache group to file
      lineinfile:
        dest: /etc/group
-       line: "apache:x:19954:"
+       line: "apache:x:33596:"
      when: test_grep.stdout == "0"
