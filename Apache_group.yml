@@ -1,0 +1,30 @@
+---
+
+- hosts: apache
+  become: true
+  remote_user: localansible-eto
+  tasks:
+   - name: create group
+     become: true
+     become_method: sudo
+     group:
+       gid: 19954
+       name: apache
+       state: present
+   - name: create user
+     become: true
+     become_method: sudo
+     user:
+       name: apache
+       group: apache
+       state: present
+
+   - name: checking for local apache group in file
+     shell: grep -c apache /etc/group || true
+     register: test_grep
+
+   - name: adding local apache group to file
+     lineinfile:
+       dest: /etc/group
+       line: "apache:x:19954:"
+     when: test_grep.stdout == "0"
