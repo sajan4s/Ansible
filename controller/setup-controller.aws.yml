@@ -1,0 +1,41 @@
+---
+
+- hosts: localhost
+  vars:
+    ansible_data_version: "{{ lookup('env','ansible_data_version') }}"
+    ansible_playbooks_version: "{{ lookup('env','ansible_playbooks_version') }}"
+    ansible_app_dynamics_version: "{{ lookup('env','ansible_app_dynamics_version') }}"
+    ansible_multi_app_version: "{{ lookup('env','ansible_multi_app_version') }}"
+    ansible_patchautomation_version: "{{ lookup('env','ansible_patchautomation_version') }}"
+    ansible_proxy_common_version: "{{ lookup('env','ansible_proxy_common_version') }}"
+    ansible_tripcase_platform_version: "{{ lookup('env','ansible_tripcase_platform_version') }}"
+    ansible_templates_patchautomation_version: "{{ lookup('env','ansible_templates_patchautomation_version') }}"
+    ansible_tripcase_touch2_version: "{{ lookup('env', 'ansible_tripcase_touch2_version') }}"
+    ansible_tripcase_tcrails_version: "{{ lookup('env', 'ansible_tripcase_tcrails_version') }}"
+  tasks:
+    - name: checkout correct version of ansible-data
+      git:
+        repo: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/ansible-data
+        dest: /code/ansible-data
+        version: "{{ ansible_data_version }}"
+      tags:
+        - checkout_ansible_data
+    - name: checkout correct version of ansible-playbooks
+      git:
+        repo: ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/ansible-playbooks
+        dest: /code/ansible-playbooks
+        version: "{{ ansible_playbooks_version }}"
+      tags:
+        - checkout_ansible_playbooks
+    - name: generate the requirements.yml template
+      template:
+        src: /tmp/requirements.yml.j2
+        dest: /code/requirements.yml
+        mode: "0644"
+      tags:
+        - generate_requirements_yml
+    - name: use ansible-galaxy to install correct roles
+      command: ansible-galaxy install -r /code/requirements.yml -p /code/ansible-roles
+      tags:
+        - run_ansible_galaxy
+
