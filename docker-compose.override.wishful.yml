@@ -1,0 +1,35 @@
+version: "2.1"
+
+services:
+
+  control:
+    image: 213779334216.dkr.ecr.us-west-2.amazonaws.com/teo-ansible-controller:no_proxy_latest
+    environment:
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      no_proxy: "*"
+      NO_PROXY: "*"
+      ANSIBLE_REMOTE_TEMP: /tmp/ansible-eto
+      ANSIBLE_REMOTE_USER: localansible-eto
+      ANSIBLE_INVENTORY: /code/ansible-data/cert/hosts
+      ANSIBLE_VAULT_PASSWORD_FILE: /code/.vault_pass.txt
+    volumes:
+      - /apps/ansible-controller/controller/.vault_pass.txt:/code/.vault_pass.txt:ro
+  debug:
+    image: 213779334216.dkr.ecr.us-west-2.amazonaws.com/teo-ansible-controller:debug_no_proxy_latest
+    environment:
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      no_proxy: "*"
+      NO_PROXY: "*"
+      ANSIBLE_REMOTE_TEMP: /tmp/ansible-eto
+      ANSIBLE_REMOTE_USER: localansible-eto
+      ANSIBLE_INVENTORY: /code/ansible-data/cert/hosts
+      ANSIBLE_VAULT_PASSWORD_FILE: /code/.vault_pass.txt
+    volumes:
+      - /apps/ansible-controller/controller/.vault_pass.txt:/code/.vault_pass.txt:ro
+
