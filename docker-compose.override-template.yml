@@ -1,0 +1,38 @@
+version: "2.1"
+
+services:
+
+  control:
+    build:
+      args:
+        SRC_REPO_URL: ltxl1895.sgdcelab.sabre.com:5000/tc-base-ansible
+    environment:
+      ANSIBLE_INVENTORY: /code/ansible-data/sandbox/hosts
+    volumes:
+      - ~/apps/ansible-playbooks:/code/ansible-playbooks
+      - ~/apps/ansible-roles:/code/ansible-roles
+      # add additional roles here
+      # - $HOME/apps/ansible-tcp-common:/code/ansible-roles/ansible-tcp-common
+    links:
+      - target
+
+
+  # this clause gives you docker boxes to work with for sandbox mode
+  # you can run multiples by setting the number on the commandline
+  # docker-compose scale target=10
+  # for example.  It will be ready to ssh to locally, and from
+  # the ansible controller
+  # first, get the port
+  # docker-compose ps...look for the port, like 32769
+  # then,
+  # ssh -p 32769 ansible-eto@localhost
+
+  target:
+      image: jdeathe/centos-ssh:centos-7
+      ports:
+        - "22"
+      environment:
+        SSH_SUDO: ALL=(ALL) NOPASSWD:ALL
+        SSH_USER: ansible-eto
+        SSH_AUTHORIZED_KEYS:
+
