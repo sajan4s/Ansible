@@ -1,0 +1,42 @@
+{
+  "name": "build-teo-ansible-controller",
+  "description": "automated build of TEO Docker images",
+  "serviceRole": "arn:aws:iam::213779334216:role/service-role/code-build-teo-images-service-role",
+  "tags": [],
+  "artifacts": {
+    "namespaceType": "NONE",
+    "packaging": "NONE",
+    "type": "S3",
+    "location": "codepipeline-us-west-2-208295726197",
+    "name": "dummy-build-output.txt"
+  },
+  "timeoutInMinutes": 60,
+  "environment": {
+    "computeType": "BUILD_GENERAL1_SMALL",
+    "privilegedMode": true,
+    "image": "aws/codebuild/docker:1.12.1",
+    "type": "LINUX_CONTAINER",
+    "environmentVariables": [
+      {
+        "name": "IMAGE_REPO",
+        "value": "teo-ansible-controller",
+        "type": "PLAINTEXT"
+      },
+      {
+        "name": "IMAGE_TAG",
+        "value": "no_proxy_latest",
+        "type": "PLAINTEXT"
+      },
+      {
+        "name": "DOCKERFILENAME",
+        "value": "Dockerfile.no_proxy.aws",
+        "type": "PLAINTEXT"
+      }
+    ]
+  },
+  "source": {
+    "type": "CODECOMMIT",
+    "location": "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/ansible-controller"
+  },
+  "encryptionKey": "arn:aws:kms:us-west-2:213779334216:alias/aws/s3"
+}
