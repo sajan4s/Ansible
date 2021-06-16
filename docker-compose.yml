@@ -1,0 +1,22 @@
+version: "2.1"
+
+services:
+
+  control:
+    build: controller
+    environment:
+      ANSIBLE_HOST_KEY_CHECKING: 'False'
+      ANSIBLE_REMOTE_TEMP: /tmp/ansible-eto
+      ANSIBLE_REMOTE_TEMP: /tmp/ansible-eto
+    command: /bin/bash
+
+  debug:
+    build:
+      context: controller
+      dockerfile: Dockerfile.debug
+    environment:
+      ANSIBLE_HOST_KEY_CHECKING: 'False'
+      ANSIBLE_REMOTE_TEMP: /tmp/ansible-eto
+      ANSIBLE_REMOTE_TEMP: /tmp/ansible-eto
+    ports:
+      - "2222:22"
