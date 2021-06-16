@@ -1,0 +1,242 @@
+# This Dockerfile.debug.older is obsolete, and only used for Docker 1.13 on dh6tc023
+# it is replaced by Dockerfile.debug
+#
+FROM 213779334216.dkr.ecr.us-west-2.amazonaws.com/teo-base-ansible:no_proxy_latest
+
+# SSH implementation borrowed heavily from
+# https://github.com/jdeathe/centos-ssh/blob/centos-7/Dockerfile
+
+### Start SSH implementation
+
+# -----------------------------------------------------------------------------
+# Base Install + Import the RPM GPG keys for Repositories
+# -----------------------------------------------------------------------------
+RUN rpm --rebuilddb \
+	&& rpm --import \
+		http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7 \
+	&& rpm --import \
+		https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7 \
+	&& yum -y install \
+			--setopt=tsflags=nodocs \
+			--disableplugin=fastestmirror \
+		centos-release-scl \
+		centos-release-scl-rh \
+		epel-release \
+		openssh \
+		openssh-server \
+		openssh-clients \
+		openssl \
+		sudo \
+		vim-minimal \
+		xz \
+	&& yum clean all \
+	&& rm -rf /etc/ld.so.cache \
+	&& rm -rf /sbin/sln \
+	&& rm -rf /usr/{{lib,share}/locale,share/{man,doc,info,cracklib,i18n},{lib,lib64}/gconv,bin/localedef,sbin/build-locale-archive} \
+	&& rm -rf /{root,tmp,var/cache/{ldconfig,yum}}/* \
+	&& > /etc/sysconfig/i18n
+
+# -----------------------------------------------------------------------------
+# UTC Timezone & Networking
+# -----------------------------------------------------------------------------
+RUN ln -sf \
+		/usr/share/zoneinfo/UTC \
+		/etc/localtime \
+	&& echo "NETWORKING=yes" > /etc/sysconfig/network
+
+# -----------------------------------------------------------------------------
+# Configure SSH for non-root public key authentication
+# -----------------------------------------------------------------------------
+RUN sed -i \
+	-e 's~^PasswordAuthentication yes~PasswordAuthentication no~g' \
+	-e 's~^#PermitRootLogin yes~PermitRootLogin no~g' \
+	-e 's~^#UseDNS yes~UseDNS no~g' \
+	-e 's~^\(.*\)/usr/libexec/openssh/sftp-server$~\1internal-sftp~g' \
+	/etc/ssh/sshd_config
+
+# -----------------------------------------------------------------------------
+# Enable the wheel sudoers group
+# -----------------------------------------------------------------------------
+RUN sed -i \
+	-e 's~^# %wheel\tALL=(ALL)\tALL~%wheel\tALL=(ALL) ALL~g' \
+	-e 's~\(.*\) requiretty$~#\1requiretty~' \
+	/etc/sudoers
+
+# -----------------------------------------------------------------------------
+# Copy files into place
+# -----------------------------------------------------------------------------
+ADD debug/src/usr/bin \
+	/usr/bin/
+ADD debug/src/etc/systemd/system \
+	/etc/systemd/system/
+ADD debug/src/etc/services-config/ssh/authorized_keys \
+	debug/src/etc/services-config/ssh/sshd-bootstrap.conf \
+	debug/src/etc/services-config/ssh/sshd-bootstrap.env \
+	/etc/services-config/ssh/
+
+RUN mkdir -p \
+		/etc/supervisord.d/ \
+	&& cp -pf \
+		/etc/ssh/sshd_config \
+		/etc/services-config/ssh/ \
+	&& ln -sf \
+		/etc/services-config/ssh/sshd_config \
+		/etc/ssh/sshd_config \
+	&& ln -sf \
+		/etc/services-config/ssh/sshd-bootstrap.conf \
+		/etc/sshd-bootstrap.conf \
+	&& ln -sf \
+		/etc/services-config/ssh/sshd-bootstrap.env \
+		/etc/sshd-bootstrap.env \
+	&& ln -sf \
+		/etc/services-config/supervisor/supervisord.conf \
+		/etc/supervisord.conf \
+	&& ln -sf \
+		/etc/services-config/supervisor/supervisord.d/sshd-wrapper.conf \
+		/etc/supervisord.d/sshd-wrapper.conf \
+	&& ln -sf \
+		/etc/services-config/supervisor/supervisord.d/sshd-bootstrap.conf \
+		/etc/supervisord.d/sshd-bootstrap.conf
+
+EXPOSE 22
+
+# -----------------------------------------------------------------------------
+# Set default environment variables
+# -----------------------------------------------------------------------------
+ENV SSH_AUTHORIZED_KEYS="" \
+	SSH_AUTOSTART_SSHD=true \
+	SSH_AUTOSTART_SSHD_BOOTSTRAP=true \
+	SSH_CHROOT_DIRECTORY="%h" \
+	SSH_INHERIT_ENVIRONMENT=false \
+	SSH_SUDO="ALL=(ALL) ALL" \
+	SSH_USER="app-admin" \
+	SSH_USER_FORCE_SFTP=false \
+	SSH_USER_HOME="/home/%u" \
+	SSH_USER_ID="500:500" \
+	SSH_USER_PASSWORD="" \
+	SSH_USER_PASSWORD_HASHED=false \
+	SSH_USER_SHELL="/bin/bash"
+
+### End SSH implementation
+
+# ansible pre-build step input
+ARG ansible_setup_file=setup-controller.yml
+ARG ansible_requirements_file=requirements.yml.j2
+
+# ansible user data arg/env combos
+ARG ansible_data_version=master
+ARG ansible_playbooks_version=master
+ARG ansible_app_dynamics_version=master
+ARG ansible_multi_app_version=master
+ARG ansible_patchautomation_version=master
+ARG ansible_proxy_common_version=master
+ARG ansible_tripcase_platform_version=master
+ARG ansible_templates_patchautomation_version=master
+ARG ansible_tripcase_touch2_version=master
+ARG ansible_tripcase_tcrails_version=master
+
+ENV ansible_data_version=$ansible_data_version \
+  ansible_playbooks_version=$ansible_playbooks_version \
+  ansible_app_dynamics_version=$ansible_app_dynamics_version \
+  ansible_multi_app_version=$ansible_multi_app_version \
+  ansible_patchautomation_version=$ansible_patchautomation_version \
+  ansible_proxy_common_version=$ansible_proxy_common_version \
+  ansible_tripcase_platform_version=$ansible_tripcase_platform_version \
+  ansible_templates_patchautomation_version=$ansible_templates_patchautomation_version \
+  ansible_tripcase_touch2_version=$ansible_tripcase_touch2_version \
+  ansible_tripcase_tcrails_version=$ansible_tripcase_tcrails_version
+
+# ansible system data arg/env combos
+ARG ANSIBLE_REMOTE_USER=localansible-eto
+ARG ANSIBLE_VAULT_PASSWORD=replaceme
+ARG ANSIBLE_INVENTORY=/code/ansible-data/cert/hosts
+  
+ENV ANSIBLE_REMOTE_USER=$ANSIBLE_REMOTE_USER \
+  ANSIBLE_HOST_KEY_CHECKING=False \
+  ANSIBLE_INVENTORY=$ANSIBLE_INVENTORY \
+  ANSIBLE_ROLES_PATH=/code/ansible-roles:/usr/share/ansible/roles:/etc/ansible/roles \
+  ANSIBLE_VAULT_PASSWORD_FILE=/code/.vault_pass.txt
+
+# TODO: perhaps run a command to generate the inventory file
+# For now, just checking it out of source code
+# locally during the build process and mounting as volume
+
+RUN useradd -s /bin/bash $ANSIBLE_REMOTE_USER \
+ && mkdir -p /home/$ANSIBLE_REMOTE_USER/.ssh \
+ && echo "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAqbAGe0EreRWXYPvTaDsvqX+BRFrb5AOnhSKmVVM+0LBzQF0b8tdwmXuZnCalZLXIhC0llAsLSzCgK/Vog5BHxpa7SE4NwTE2DdMWHsP2v0wJpMe4dvgbMTA99IjijDZ0NIm66PLFMzKypXpl4rBcyhRTbdgNOYqAqCR6jkK3ztpExpJypZMuNgWMSATotYoNVHymOBBDHWW/zudHyHGgUroCLkyBjkVaPWDuzy43Tdr/dCrQs4+JMDF877ShVfpx+OQY8MHRilldGaIzdGmIAhKKpFI0Gl2xqB4WIJh3V5mNficOsS1lOHtVNfg2DHcWNnyV+sEvZ3pDn3qGeDiHWw==" > /home/$ANSIBLE_REMOTE_USER/.ssh/authorized_keys
+
+# Because we aren't going into container directly, but SSHing, we need to
+# set up env based off of build vars
+
+RUN echo "no_proxy=$no_proxy" > /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "NO_PROXY=$no_proxy" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "http_proxy=$http_proxy" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "HTTPS_PROXY=$http_proxy" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "https_proxy=$http_proxy" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "HTTP_PROXY=$http_proxy" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+
+ && echo "ANSIBLE_ROLES_PATH=$ANSIBLE_ROLES_PATH" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ANSIBLE_HOST_KEY_CHECKING=False" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ANSIBLE_INVENTORY=$ANSIBLE_INVENTORY" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ANSIBLE_REMOTE_USER=$ANSIBLE_REMOTE_USER" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ANSIBLE_VAULT_PASSWORD_FILE=/code/.vault_pass.txt" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+
+ && echo "ansible_multi_app_version=$ansible_multi_app_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ansible_proxy_common_version=$ansible_proxy_common_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ansible_playbooks_version=$ansible_playbooks_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ansible_tripcase_platform_version=$ansible_tripcase_platform_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ansible_templates_patchautomation_version=$ansible_templates_patchautomation_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ansible_app_dynamics_version=$ansible_app_dynamics_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ansible_data_version=$ansible_data_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+ && echo "ansible_patchautomation_version=$ansible_patchautomation_version" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+
+ && echo "export no_proxy NO_PROXY http_proxy HTTP_PROXY https_proxy HTTPS_PROXY" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+
+ && echo "export ANSIBLE_REMOTE_USER ANSIBLE_VAULT_PASSWORD_FILE ANSIBLE_HOST_KEY_CHECKING ANSIBLE_INVENTORY ANSIBLE_ROLES_PATH" >> /home/$ANSIBLE_REMOTE_USER/.bashrc \
+
+ && echo "export ansible_data_version ansible_playbooks_version \
+  ansible_app_dynamics_version ansible_multi_app_version \
+  ansible_patchautomation_version ansible_proxy_common_version \
+  ansible_tripcase_platform_version ansible_templates_patchautomation_version"  >> /home/$ANSIBLE_REMOTE_USER/.bashrc
+
+COPY debug/bash_profile /home/$ANSIBLE_REMOTE_USER/.bash_profile
+COPY known_hosts /home/$ANSIBLE_REMOTE_USER/.ssh/known_hosts
+COPY id_rsa /home/$ANSIBLE_REMOTE_USER/.ssh/id_rsa
+COPY codecommit_rsa /home/$ANSIBLE_REMOTE_USER/.ssh/codecommit_rsa
+COPY ssh_config /home/$ANSIBLE_REMOTE_USER/.ssh/config
+COPY $ansible_setup_file /code/setup-controller.yml
+COPY $ansible_requirements_file /tmp/requirements.yml.j2
+COPY ansible.cfg /etc/ansible/ansible.cfg
+
+RUN chown -R $ANSIBLE_REMOTE_USER:$ANSIBLE_REMOTE_USER /home/$ANSIBLE_REMOTE_USER \
+ && chmod 0700 /home/$ANSIBLE_REMOTE_USER/.ssh \
+ && chmod 0400 /home/$ANSIBLE_REMOTE_USER/.ssh/codecommit_rsa \
+ && chmod 0600 /home/$ANSIBLE_REMOTE_USER/.ssh/config
+
+RUN mkdir -p /code \
+ && echo $ANSIBLE_VAULT_PASSWORD > /code/.vault_pass.txt \
+ && chmod 0400 /code/.vault_pass.txt \
+ && chown -R $ANSIBLE_REMOTE_USER:$ANSIBLE_REMOTE_USER /code
+
+USER $ANSIBLE_REMOTE_USER
+
+WORKDIR /code/ansible-controller
+
+RUN ansible-playbook -l localhost /code/setup-controller.yml
+
+
+# Run SSHD
+
+USER root
+
+RUN ssh-keygen -q -C "" -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key &> /dev/null \
+ && ssh-keygen -q -C "" -N "" -t ecdsa -f /etc/ssh/ssh_host_ecdsa_key &> /dev/null \
+ && ssh-keygen -q -C "" -N "" -t ed25519 -f /etc/ssh/ssh_host_ed25519_key &> /dev/null
+
+HEALTHCHECK \
+	--interval=0.5s \
+	--timeout=1s \
+	--retries=5 \
+	CMD ["/usr/bin/healthcheck"]
+
+CMD ["/usr/sbin/sshd", "-d", "-e", "-u 0"]
