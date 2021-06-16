@@ -1,0 +1,52 @@
+version: 0.2
+
+env:
+  variables:
+    IMAGE_REPO: teo-ansible-controller
+    SRC_IMAGE_TAG: no_proxy_latest
+    IMAGE_TAG: no_proxy_latest
+    DOCKERFILENAME: Dockerfile.no_proxy.aws
+    AWS_ACCOUNT_ID: 213779334216
+    ANSIBLE_SETUP_FILE: setup-controller.yml
+    ANSIBLE_REQUIREMENTS_FILE: requirements.yml.j2
+#  parameter-store:
+#    LOCALANSIBLE_ETO_CC_PASS: /CodeBuild/LOCALANSIBLE_ETO_CC_PASS
+
+phases:
+  #install:
+    #commands:
+      # - command
+      # - command
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION)
+      # key to access CodeCommit only
+      - aws s3 cp s3://teoautomation/restricted/localansible-eto-cc.key controller/codecommit_rsa
+      # key to VMs
+      - aws s3 cp s3://teoautomation/restricted/localansible-eto-ssh.key controller/id_rsa
+      - chmod 0400 controller/id_rsa
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building Docker image
+      - >
+        docker build
+        --build-arg SRC_IMAGE_TAG=$SRC_IMAGE_TAG
+        --build-arg ansible_setup_file=$ANSIBLE_SETUP_FILE
+        --build-arg ansible-requirements_file=$ANSIBLE_REQUIREMENTS_FILE
+        -t $IMAGE_REPO:$IMAGE_TAG
+        -f controller/$DOCKERFILENAME
+        controller
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing Docker image
+      - docker tag $IMAGE_REPO:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO:$IMAGE_TAG
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO:$IMAGE_TAG
+#artifacts:
+#  files:
+    # - location
+    # - location
+  #discard-paths: yes
+  #base-directory: location
