@@ -1,0 +1,7 @@
+
+cd /apps/ansible-controller/
+docker-compose run -e ANSIBLE_INVENTORY=/code/ansible-data/production/hosts control
+
+
+cd /apps/ansible-controller/
+docker-compose run -e ANSIBLE_INVENTORY=/code/ansible-data/cert/hosts control
