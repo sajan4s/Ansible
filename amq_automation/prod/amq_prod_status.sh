@@ -52,7 +52,7 @@ then
 
   echo 'Restarting master'
   ansible-playbook -i master.txt ../amq_restart.yml
-  echo 'PROD ActiveMQ has been restarted' | mailx -E -s "PROD ActiveMQ has been restarted" sajan4s@gmail.com
+  echo 'PROD ActiveMQ has been restarted' | mailx -E -s "PROD ActiveMQ has been restarted" emailaddress
   exit 1
 else
   echo 'PROD AMQ is up'
