@@ -40,7 +40,7 @@ then
 
   echo 'Restarting master'
   ansible-playbook -i master.txt ../amq_restart.yml
-  echo 'CERT ActiveMQ has been restarted' | mailx -E -s "CERT ActiveMQ has been restarted" sajan4s@gmail.com
+  echo 'CERT ActiveMQ has been restarted' | mailx -E -s "CERT ActiveMQ has been restarted" emailaddress
   exit 1
 else
   echo 'CERT AMQ is up'
