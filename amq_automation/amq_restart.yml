@@ -1,22 +1,18 @@
 ---
 -
   hosts: all
-  become: true
-  remote_user: localansible-eto
 
   tasks:
 
     - name: Stop ActiveMQ
-      become: true
-      become_user: root
-      command: service activemq stop
+      service:
+        name: activemq
+        state: stopped
 
-    - name: sleep 10
-      become: true
-      become_user: root
-      command: sleep 10
+    - name: sleep 5
+      command: sleep 5
 
     - name: Start ActiveMQ
-      become: yes
-      become_user: root
-      command: service activemq start
+      service:
+        name: activemq
+        state: started
