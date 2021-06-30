@@ -11,6 +11,8 @@ tc_3=$?
 # Section to find the current master and store in the file master.txt
 # master.txt file wil be overwritten with current master during each run
 
+cd /home/user/amq_automation/cert/
+
 if [[ $tc_1 -eq 0 ]]
 then
    nc -z host1 $port | awk '{ print $3 }'  > master.txt
@@ -34,7 +36,7 @@ then
   echo 'Cert ActiveMQ has no master'
   echo 'Restarting slaves'
   grep -v $m activemq_cert_inventory.txt > new_inventory.txt
-  cat new_inventory.txt
+
   ansible-playbook -i new_inventory.txt ../amq_restart.yml
   sleep 10
 
