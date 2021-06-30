@@ -17,6 +17,8 @@ tc_5=$?
 # Section to find the current master and store in the file master.txt
 # master.txt file wil be overwritten with current master during each run
 
+cd /home/user/amq_automation/prod/
+
 if [[ $tc_1 -eq 0 ]]
 then
    nc -z host1 $port | awk '{ print $3 }'  > master.txt
